@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Car, Plus, Search } from "lucide-react";
+import { Car, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AddVehicleDialog } from "@/components/forms/add-vehicle-dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -59,10 +60,7 @@ export default function VehiclesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Vehicles</h1>
           <p className="text-sm text-muted-foreground">{demoVehicles.length} vehicles in your fleet</p>
         </div>
-        <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Vehicle
-        </Button>
+        <AddVehicleDialog />
       </div>
 
       {/* Filters */}

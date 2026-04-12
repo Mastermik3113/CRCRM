@@ -1,5 +1,6 @@
-import { CreditCard, Plus, Search, DollarSign } from "lucide-react";
+import { CreditCard, Search, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LogPaymentDialog } from "@/components/forms/log-payment-dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -12,10 +13,7 @@ export default function PaymentsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
           <p className="text-sm text-muted-foreground">Track payments and security deposits</p>
         </div>
-        <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md">
-          <Plus className="mr-2 h-4 w-4" />
-          Log Payment
-        </Button>
+        <LogPaymentDialog />
       </div>
 
       {/* Payment Summary */}

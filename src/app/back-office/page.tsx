@@ -1,5 +1,6 @@
-import { Building2, Plus, Receipt, TrendingDown } from "lucide-react";
+import { Building2, Receipt, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LogExpenseDialog } from "@/components/forms/log-expense-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
 
@@ -11,10 +12,7 @@ export default function BackOfficePage() {
           <h1 className="text-2xl font-bold tracking-tight">Back Office</h1>
           <p className="text-sm text-muted-foreground">Expenses, reporting, and business operations</p>
         </div>
-        <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md">
-          <Plus className="mr-2 h-4 w-4" />
-          Log Expense
-        </Button>
+        <LogExpenseDialog />
       </div>
 
       {/* Summary Cards */}

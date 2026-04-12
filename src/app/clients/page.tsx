@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Users, Plus, Search, Mail, Phone } from "lucide-react";
+import { Users, Search, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AddClientDialog } from "@/components/forms/add-client-dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -60,10 +61,7 @@ export default function ClientsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
           <p className="text-sm text-muted-foreground">{demoClients.length} clients &middot; {counts.converted} active &middot; {counts.inquiry + counts.contacted} leads</p>
         </div>
-        <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Client
-        </Button>
+        <AddClientDialog />
       </div>
 
       {/* Filters */}
