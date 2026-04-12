@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
-import { FAB } from "@/components/layout/fab";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AppShell } from "@/components/layout/app-shell";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,16 +25,7 @@ export default function RootLayout({
       <body className="h-full font-sans antialiased">
         <ThemeProvider>
           <TooltipProvider>
-            <div className="flex h-full">
-              <Sidebar />
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <Header />
-                <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-background">
-                  {children}
-                </main>
-              </div>
-            </div>
-            <FAB />
+            <AppShell>{children}</AppShell>
           </TooltipProvider>
         </ThemeProvider>
       </body>

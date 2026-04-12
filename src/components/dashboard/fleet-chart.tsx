@@ -7,11 +7,19 @@ import {
 } from "@/components/ui/card";
 import { PieChart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { demoVehicles } from "@/lib/demo-data";
+
+const total = demoVehicles.length;
+const available = demoVehicles.filter((v) => v.status === "available").length;
+const rented = demoVehicles.filter((v) => v.status === "rented").length;
+const maintenance = demoVehicles.filter((v) => v.status === "maintenance").length;
+const outOfService = demoVehicles.filter((v) => v.status === "out_of_service").length;
 
 const fleetData = [
-  { label: "Available", value: 8, color: "bg-emerald-500", textColor: "text-emerald-500", percentage: 67 },
-  { label: "Rented", value: 3, color: "bg-blue-500", textColor: "text-blue-500", percentage: 25 },
-  { label: "Maintenance", value: 1, color: "bg-amber-500", textColor: "text-amber-500", percentage: 8 },
+  { label: "Available", value: available, color: "bg-emerald-500", percentage: Math.round((available / total) * 100) },
+  { label: "Rented", value: rented, color: "bg-blue-500", percentage: Math.round((rented / total) * 100) },
+  { label: "Maintenance", value: maintenance, color: "bg-amber-500", percentage: Math.round((maintenance / total) * 100) },
+  ...(outOfService > 0 ? [{ label: "Out of Service", value: outOfService, color: "bg-red-500", percentage: Math.round((outOfService / total) * 100) }] : []),
 ];
 
 export function FleetChart() {
@@ -24,12 +32,11 @@ export function FleetChart() {
           </div>
           <div>
             <CardTitle className="text-base">Fleet Utilization</CardTitle>
-            <CardDescription className="text-xs">Current vehicle status breakdown</CardDescription>
+            <CardDescription className="text-xs">{total} vehicles total</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Horizontal stacked bar */}
         <div className="mt-4 mb-6">
           <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
             {fleetData.map((item) => (
@@ -41,8 +48,6 @@ export function FleetChart() {
             ))}
           </div>
         </div>
-
-        {/* Legend */}
         <div className="space-y-3">
           {fleetData.map((item) => (
             <div key={item.label} className="flex items-center justify-between">

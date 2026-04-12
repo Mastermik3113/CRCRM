@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState } from "react";
+import { demoVehicles } from "@/lib/demo-data";
 
 interface NavItem {
   label: string;
@@ -162,15 +163,15 @@ export function Sidebar() {
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Available</span>
-              <span className="text-xs font-semibold text-emerald-400">8</span>
+              <span className="text-xs font-semibold text-emerald-400">{demoVehicles.filter(v => v.status === "available").length}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Rented</span>
-              <span className="text-xs font-semibold text-blue-400">3</span>
+              <span className="text-xs font-semibold text-blue-400">{demoVehicles.filter(v => v.status === "rented").length}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Maintenance</span>
-              <span className="text-xs font-semibold text-amber-400">1</span>
+              <span className="text-xs font-semibold text-amber-400">{demoVehicles.filter(v => v.status === "maintenance").length}</span>
             </div>
           </div>
         </div>
