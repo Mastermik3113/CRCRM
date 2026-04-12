@@ -14,6 +14,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { demoVehicles } from "@/lib/demo-data";
+import { logout } from "./app-shell";
 
 interface NavItem {
   label: string;
@@ -188,10 +190,19 @@ export function Sidebar() {
           AD
         </div>
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">Admin</p>
-            <p className="text-[11px] text-slate-400">Administrator</p>
-          </div>
+          <>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white truncate">Admin</p>
+              <p className="text-[11px] text-slate-400">Administrator</p>
+            </div>
+            <button
+              onClick={logout}
+              className="text-slate-500 hover:text-red-400 transition-colors"
+              title="Log out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </>
         )}
       </div>
     </aside>
