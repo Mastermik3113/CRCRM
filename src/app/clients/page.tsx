@@ -1,16 +1,64 @@
-import { Users, Plus, Search } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Users, Plus, Search, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { demoClients, getRentalsByClient, getClientTotalSpend } from "@/lib/demo-data";
+import type { LeadStatus } from "@/types/database";
+
+const leadStyles: Record<LeadStatus, { bg: string; text: string; label: string }> = {
+  inquiry: { bg: "bg-blue-100 dark:bg-blue-950", text: "text-blue-700 dark:text-blue-400", label: "Inquiry" },
+  contacted: { bg: "bg-amber-100 dark:bg-amber-950", text: "text-amber-700 dark:text-amber-400", label: "Contacted" },
+  converted: { bg: "bg-emerald-100 dark:bg-emerald-950", text: "text-emerald-700 dark:text-emerald-400", label: "Converted" },
+  lost: { bg: "bg-red-100 dark:bg-red-950", text: "text-red-700 dark:text-red-400", label: "Lost" },
+};
+
+type FilterStatus = "all" | LeadStatus;
 
 export default function ClientsPage() {
+  const [filter, setFilter] = useState<FilterStatus>("all");
+  const [search, setSearch] = useState("");
+
+  const filtered = demoClients.filter((c) => {
+    if (filter !== "all" && c.lead_status !== filter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        c.first_name.toLowerCase().includes(q) ||
+        c.last_name.toLowerCase().includes(q) ||
+        (c.email?.toLowerCase().includes(q) ?? false) ||
+        (c.phone?.includes(q) ?? false)
+      );
+    }
+    return true;
+  });
+
+  const counts = {
+    all: demoClients.length,
+    converted: demoClients.filter((c) => c.lead_status === "converted").length,
+    inquiry: demoClients.filter((c) => c.lead_status === "inquiry").length,
+    contacted: demoClients.filter((c) => c.lead_status === "contacted").length,
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
-          <p className="text-sm text-muted-foreground">Manage clients and track leads</p>
+          <p className="text-sm text-muted-foreground">{demoClients.length} clients &middot; {counts.converted} active &middot; {counts.inquiry + counts.contacted} leads</p>
         </div>
         <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md">
           <Plus className="mr-2 h-4 w-4" />
@@ -18,37 +66,98 @@ export default function ClientsPage() {
         </Button>
       </div>
 
-      {/* Tabs for views */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="text-xs font-medium">All Clients</Button>
-              <Button variant="ghost" size="sm" className="text-xs font-medium">Leads Pipeline</Button>
-            </div>
-            <div className="relative max-w-xs w-full">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search clients..." className="pl-9" />
+              <Input
+                placeholder="Search by name, email, phone..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {(["all", "converted", "inquiry", "contacted"] as FilterStatus[]).map((s) => (
+                <Button
+                  key={s}
+                  variant={filter === s ? "outline" : "ghost"}
+                  size="sm"
+                  className={cn("text-xs font-medium", filter === s && "border-primary text-primary")}
+                  onClick={() => setFilter(s)}
+                >
+                  {s === "all" ? "All" : leadStyles[s].label}
+                  <span className="ml-1.5 text-muted-foreground">
+                    {s === "all" ? counts.all : counts[s as keyof typeof counts] ?? demoClients.filter(c => c.lead_status === s).length}
+                  </span>
+                </Button>
+              ))}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="card-hover">
-        <CardContent className="flex h-64 items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-              <Users className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="mt-4 text-lg font-semibold">No clients yet</h3>
-            <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-              Add your first client to start tracking rentals and leads
-            </p>
-            <Button className="mt-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Client
-            </Button>
-          </div>
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[11px] uppercase tracking-wider font-semibold">Client</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider font-semibold">Contact</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider font-semibold">Status</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider font-semibold">Source</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider font-semibold">Rentals</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider font-semibold">Total Spend</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((client) => {
+                const style = leadStyles[client.lead_status];
+                const rentalCount = getRentalsByClient(client.id).length;
+                const totalSpend = getClientTotalSpend(client.id);
+                return (
+                  <TableRow key={client.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <TableCell>
+                      <Link href={`/clients/${client.id}`} className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-white text-xs font-bold shrink-0">
+                          {client.first_name[0]}{client.last_name[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{client.first_name} {client.last_name}</p>
+                          <p className="text-xs text-muted-foreground">DL: {client.drivers_license_number ?? "N/A"}</p>
+                        </div>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {client.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {client.phone}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={cn("badge-dot inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", style.bg, style.text)}>
+                        {style.label}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs capitalize text-muted-foreground">{client.lead_source}</TableCell>
+                    <TableCell className="text-sm">{rentalCount}</TableCell>
+                    <TableCell className="text-sm font-medium">
+                      {totalSpend > 0 ? formatCurrency(totalSpend) : "—"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
