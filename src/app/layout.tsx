@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { FAB } from "@/components/layout/fab";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "RentFlow - Car Rental CRM",
+  title: "CRCRM - Car Rental Management",
   description: "Car Rental CRM and Back-Office Management System",
 };
 
@@ -26,22 +23,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="h-full">
-        <TooltipProvider>
-          <div className="flex h-full">
-            <Sidebar />
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <Header />
-              <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-                {children}
-              </main>
+    <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
+      <body className="h-full font-sans antialiased">
+        <ThemeProvider>
+          <TooltipProvider>
+            <div className="flex h-full">
+              <Sidebar />
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <Header />
+                <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-background">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-        </TooltipProvider>
+            <FAB />
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

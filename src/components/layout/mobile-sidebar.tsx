@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Menu, Car } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -29,17 +29,17 @@ export function MobileSidebar() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
-        render={
-          <Button variant="ghost" size="icon" className="lg:hidden" />
-        }
+        render={<Button variant="ghost" size="icon" className="lg:hidden" />}
       >
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle menu</span>
       </SheetTrigger>
-      <SheetContent side="left" className="w-64 p-0">
-        <SheetHeader className="flex h-16 flex-row items-center gap-2 border-b px-6">
-          <Car className="h-6 w-6 text-primary" />
-          <SheetTitle className="text-lg font-bold">RentFlow</SheetTitle>
+      <SheetContent side="left" className="w-[250px] p-0 sidebar-gradient border-0">
+        <SheetHeader className="flex h-16 flex-row items-center gap-3 border-b border-white/[0.08] px-5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-extrabold text-sm">
+            CR
+          </div>
+          <SheetTitle className="text-lg font-bold text-white">CRCRM</SheetTitle>
         </SheetHeader>
         <ScrollArea className="flex-1 px-3 py-4">
           <nav className="flex flex-col gap-1">
@@ -51,19 +51,19 @@ export function MobileSidebar() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200",
                     isActive(item.href)
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "nav-active text-white"
+                      : "text-slate-400 hover:text-white hover:bg-white/[0.08]"
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className="h-5 w-5 shrink-0" />
                   {item.label}
                 </Link>
               );
             })}
           </nav>
-          <Separator className="my-4" />
+          <Separator className="my-4 bg-white/[0.08]" />
           <nav className="flex flex-col gap-1">
             {secondaryNav.map((item) => {
               const Icon = item.icon;
@@ -73,13 +73,13 @@ export function MobileSidebar() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200",
                     isActive(item.href)
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "nav-active text-white"
+                      : "text-slate-400 hover:text-white hover:bg-white/[0.08]"
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className="h-5 w-5 shrink-0" />
                   {item.label}
                 </Link>
               );
