@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 140" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <!-- CR swoosh -->
+  <path d="M70 50 a40 40 0 1 0 0 40" stroke="url(#g)" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <path d="M95 30 q25 -10 45 10 q15 15 5 40" stroke="url(#g)" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <!-- Car body -->
+  <path d="M45 78 l10 -18 q3 -6 10 -6 h40 q7 0 10 6 l10 18 v10 h-80 z" fill="url(#g)"/>
+  <circle cx="60" cy="90" r="7" fill="#064e3b"/>
+  <circle cx="60" cy="90" r="3" fill="#d1fae5"/>
+  <circle cx="110" cy="90" r="7" fill="#064e3b"/>
+  <circle cx="110" cy="90" r="3" fill="#d1fae5"/>
+  <!-- Dot accents -->
+  <circle cx="38" cy="70" r="3" fill="#10b981"/>
+  <circle cx="130" cy="70" r="3" fill="#10b981"/>
+  <!-- Text -->
+  <text x="130" y="128" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="18" fill="url(#g)">Car Rental CRM</text>
+</svg>

@@ -2,8 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Sidebar } from "./sidebar";
-import { Header } from "./header";
+import { TopBar } from "./topbar";
 import { FAB } from "./fab";
 import type { ReactNode } from "react";
 
@@ -44,14 +43,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!checked) return null;
 
   return (
-    <div className="flex h-full">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-background">
-          {children}
-        </main>
-      </div>
+    <div className="flex h-full flex-col">
+      <TopBar />
+      <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-background">
+        {children}
+      </main>
       <FAB />
     </div>
   );
