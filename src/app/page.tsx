@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Car, Key, DollarSign, Clock } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { CriticalAlerts } from "@/components/dashboard/critical-alerts";
@@ -50,42 +51,50 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Vehicles"
-          value={String(totalVehicles)}
-          change={`${maintenanceCount} in maintenance`}
-          changeType="neutral"
-          icon={Car}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-50 dark:bg-blue-950"
-        />
-        <StatCard
-          title="Active Rentals"
-          value={String(activeRentals)}
-          change={`${reservedCount} upcoming reserved`}
-          changeType="positive"
-          icon={Key}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-50 dark:bg-emerald-950"
-        />
-        <StatCard
-          title="Revenue This Month"
-          value={formatCurrency(revenueThisMonth)}
-          change="+12% from last month"
-          changeType="positive"
-          icon={DollarSign}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-50 dark:bg-emerald-950"
-        />
-        <StatCard
-          title="Pending Payments"
-          value={formatCurrency(pendingAmount)}
-          change={`${pendingInvoices} invoices outstanding`}
-          changeType={pendingAmount > 0 ? "negative" : "neutral"}
-          icon={Clock}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-50 dark:bg-amber-950"
-        />
+        <Link href="/vehicles" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl">
+          <StatCard
+            title="Total Vehicles"
+            value={String(totalVehicles)}
+            change={`${maintenanceCount} in maintenance`}
+            changeType="neutral"
+            icon={Car}
+            iconColor="text-blue-600"
+            iconBg="bg-blue-50 dark:bg-blue-950"
+          />
+        </Link>
+        <Link href="/bookings" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl">
+          <StatCard
+            title="Active Rentals"
+            value={String(activeRentals)}
+            change={`${reservedCount} upcoming reserved`}
+            changeType="positive"
+            icon={Key}
+            iconColor="text-emerald-600"
+            iconBg="bg-emerald-50 dark:bg-emerald-950"
+          />
+        </Link>
+        <Link href="/payments" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl">
+          <StatCard
+            title="Revenue This Month"
+            value={formatCurrency(revenueThisMonth)}
+            change="+12% from last month"
+            changeType="positive"
+            icon={DollarSign}
+            iconColor="text-emerald-600"
+            iconBg="bg-emerald-50 dark:bg-emerald-950"
+          />
+        </Link>
+        <Link href="/payments?filter=pending" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl">
+          <StatCard
+            title="Pending Payments"
+            value={formatCurrency(pendingAmount)}
+            change={`${pendingInvoices} invoices outstanding`}
+            changeType={pendingAmount > 0 ? "negative" : "neutral"}
+            icon={Clock}
+            iconColor="text-amber-600"
+            iconBg="bg-amber-50 dark:bg-amber-950"
+          />
+        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

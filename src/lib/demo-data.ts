@@ -629,3 +629,178 @@ export function getClientTotalSpend(clientId: string): number {
 export function getVehicleLabel(v: Vehicle): string {
   return `${v.year} ${v.make} ${v.model}`;
 }
+
+// ----------------------------------------------------------------------------
+// Back Office — expenses & recurring bills
+// ----------------------------------------------------------------------------
+
+export type ExpenseCategory =
+  | "insurance"
+  | "rent"
+  | "software"
+  | "fuel"
+  | "maintenance"
+  | "parking"
+  | "marketing"
+  | "payroll"
+  | "utilities"
+  | "supplies"
+  | "legal"
+  | "other";
+
+export type Frequency = "weekly" | "monthly" | "quarterly" | "yearly";
+
+export interface RecurringExpense {
+  id: string;
+  name: string;
+  vendor: string;
+  category: ExpenseCategory;
+  amount: number;
+  frequency: Frequency;
+  next_due: string; // ISO date
+  active: boolean;
+  notes?: string | null;
+}
+
+export interface OneTimeExpense {
+  id: string;
+  description: string;
+  vendor: string | null;
+  category: ExpenseCategory;
+  amount: number;
+  expense_date: string;
+  vehicle_id: string | null;
+  notes?: string | null;
+}
+
+export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
+  insurance: "Insurance",
+  rent: "Rent",
+  software: "Software",
+  fuel: "Fuel",
+  maintenance: "Maintenance",
+  parking: "Parking",
+  marketing: "Marketing",
+  payroll: "Payroll",
+  utilities: "Utilities",
+  supplies: "Supplies",
+  legal: "Legal",
+  other: "Other",
+};
+
+export const demoRecurringExpenses: RecurringExpense[] = [
+  {
+    id: "re1",
+    name: "Fleet Insurance",
+    vendor: "Progressive Commercial",
+    category: "insurance",
+    amount: 1850,
+    frequency: "monthly",
+    next_due: "2026-05-01",
+    active: true,
+    notes: "Covers all 12 vehicles, liability + collision",
+  },
+  {
+    id: "re2",
+    name: "Office Rent",
+    vendor: "Parkway Properties LLC",
+    category: "rent",
+    amount: 2400,
+    frequency: "monthly",
+    next_due: "2026-05-01",
+    active: true,
+  },
+  {
+    id: "re3",
+    name: "Parking Lot Lease",
+    vendor: "Downtown Parking Co",
+    category: "parking",
+    amount: 650,
+    frequency: "monthly",
+    next_due: "2026-05-01",
+    active: true,
+    notes: "30 reserved spots",
+  },
+  {
+    id: "re4",
+    name: "QuickBooks Online",
+    vendor: "Intuit",
+    category: "software",
+    amount: 90,
+    frequency: "monthly",
+    next_due: "2026-04-22",
+    active: true,
+  },
+  {
+    id: "re5",
+    name: "CRM Subscription",
+    vendor: "Car Rental CRM",
+    category: "software",
+    amount: 149,
+    frequency: "monthly",
+    next_due: "2026-04-28",
+    active: true,
+  },
+  {
+    id: "re6",
+    name: "Google Workspace",
+    vendor: "Google",
+    category: "software",
+    amount: 36,
+    frequency: "monthly",
+    next_due: "2026-04-18",
+    active: true,
+    notes: "3 seats @ $12/mo",
+  },
+  {
+    id: "re7",
+    name: "Google Ads",
+    vendor: "Google",
+    category: "marketing",
+    amount: 400,
+    frequency: "monthly",
+    next_due: "2026-05-01",
+    active: true,
+  },
+  {
+    id: "re8",
+    name: "DOT Commercial Registration",
+    vendor: "State DOT",
+    category: "legal",
+    amount: 520,
+    frequency: "yearly",
+    next_due: "2026-09-15",
+    active: true,
+  },
+  {
+    id: "re9",
+    name: "Office Electric & Internet",
+    vendor: "City Utilities",
+    category: "utilities",
+    amount: 180,
+    frequency: "monthly",
+    next_due: "2026-04-25",
+    active: true,
+  },
+];
+
+export const demoOneTimeExpenses: OneTimeExpense[] = [
+  { id: "ex1", description: "New tire set — Ford F-150", vendor: "Goodyear", category: "maintenance", amount: 720, expense_date: "2026-04-11", vehicle_id: "v3" },
+  { id: "ex2", description: "Detailing — full fleet wash", vendor: "Shine Pro Detailing", category: "maintenance", amount: 340, expense_date: "2026-04-08", vehicle_id: null },
+  { id: "ex3", description: "Printer toner + office supplies", vendor: "Staples", category: "supplies", amount: 128, expense_date: "2026-04-05", vehicle_id: null },
+  { id: "ex4", description: "Diesel refill — box truck", vendor: "Shell", category: "fuel", amount: 212, expense_date: "2026-04-03", vehicle_id: "v11" },
+  { id: "ex5", description: "Attorney review — new lease template", vendor: "Marks & Partners", category: "legal", amount: 450, expense_date: "2026-03-28", vehicle_id: null },
+];
+
+export function getMonthlyRecurringTotal(): number {
+  return demoRecurringExpenses
+    .filter((r) => r.active)
+    .reduce((sum, r) => {
+      switch (r.frequency) {
+        case "weekly": return sum + r.amount * 4.33;
+        case "monthly": return sum + r.amount;
+        case "quarterly": return sum + r.amount / 3;
+        case "yearly": return sum + r.amount / 12;
+      }
+    }, 0);
+}

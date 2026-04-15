@@ -15,7 +15,7 @@ import {
   StickyNote,
   Clock,
   Image as ImageIcon,
-  Car,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -38,7 +38,12 @@ import {
   getServiceLogsByVehicle,
   getPaymentsByRental,
   getClientById,
+  demoServiceLogs,
+  demoVehicles,
 } from "@/lib/demo-data";
+import { EditVehicleDialog } from "@/components/forms/edit-vehicle-dialog";
+import { ServiceLogDialog } from "@/components/forms/service-log-dialog";
+import type { ServiceLog, Vehicle } from "@/types/database";
 
 const statusStyles: Record<string, { bg: string; text: string }> = {
   available: { bg: "bg-emerald-100 dark:bg-emerald-950", text: "text-emerald-700 dark:text-emerald-400" },
@@ -78,8 +83,20 @@ export default function VehicleDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const vehicle = getVehicleById(id);
+  const initialVehicle = getVehicleById(id);
+  const [vehicle, setVehicle] = useState<Vehicle | undefined>(initialVehicle);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+
+  // Service logs local mirror (starts from shared demo array)
+  const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>(() => getServiceLogsByVehicle(id));
+
+  // Vehicle edit dialog
+  const [editVehicleOpen, setEditVehicleOpen] = useState(false);
+
+  // Service log dialog state
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
+  const [serviceDialogMode, setServiceDialogMode] = useState<"add" | "edit">("add");
+  const [editingServiceLog, setEditingServiceLog] = useState<ServiceLog | null>(null);
 
   const [documents, setDocuments] = useState<DemoDocument[]>([
     { id: "vd1", name: "Vehicle_Registration.pdf", type: "Registration", expiry: "Sep 15, 2026", uploadedAt: "Jan 10, 2026", size: "540 KB" },
@@ -103,7 +120,44 @@ export default function VehicleDetailPage({
   }
 
   const rentals = getRentalsByVehicle(id);
-  const serviceLogs = getServiceLogsByVehicle(id);
+
+  const openAddServiceLog = () => {
+    setServiceDialogMode("add");
+    setEditingServiceLog(null);
+    setServiceDialogOpen(true);
+  };
+
+  const openEditServiceLog = (log: ServiceLog) => {
+    setServiceDialogMode("edit");
+    setEditingServiceLog(log);
+    setServiceDialogOpen(true);
+  };
+
+  const handleSaveServiceLog = (saved: ServiceLog) => {
+    setServiceLogs((prev) => {
+      const existing = prev.find((l) => l.id === saved.id);
+      const next = existing
+        ? prev.map((l) => (l.id === saved.id ? saved : l))
+        : [saved, ...prev];
+      // Mirror change into the shared demo array so other screens see it
+      const sharedIdx = demoServiceLogs.findIndex((l) => l.id === saved.id);
+      if (sharedIdx >= 0) demoServiceLogs[sharedIdx] = saved;
+      else demoServiceLogs.unshift(saved);
+      return next.sort((a, b) => b.service_date.localeCompare(a.service_date));
+    });
+  };
+
+  const handleDeleteServiceLog = (logId: string) => {
+    setServiceLogs((prev) => prev.filter((l) => l.id !== logId));
+    const sharedIdx = demoServiceLogs.findIndex((l) => l.id === logId);
+    if (sharedIdx >= 0) demoServiceLogs.splice(sharedIdx, 1);
+  };
+
+  const handleSaveVehicle = (updated: Vehicle) => {
+    setVehicle(updated);
+    const sharedIdx = demoVehicles.findIndex((v) => v.id === updated.id);
+    if (sharedIdx >= 0) demoVehicles[sharedIdx] = updated;
+  };
   const totalRevenue = rentals.reduce((sum, r) => sum + getPaymentsByRental(r.id).reduce((ps, p) => ps + p.amount, 0), 0);
   const totalServiceCost = serviceLogs.reduce((sum, s) => sum + s.cost, 0);
   const netProfit = totalRevenue - totalServiceCost;
@@ -152,6 +206,12 @@ export default function VehicleDetailPage({
             </div>
             <p className="text-sm text-muted-foreground">{vehicle.color} &middot; {vehicle.license_plate} &middot; VIN: {vehicle.vin}</p>
           </div>
+          <Button
+            onClick={() => setEditVehicleOpen(true)}
+            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md"
+          >
+            <Pencil className="mr-2 h-4 w-4" /> Edit Vehicle
+          </Button>
         </div>
       </div>
 
@@ -286,7 +346,9 @@ export default function VehicleDetailPage({
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Service History</CardTitle>
-              <Button variant="outline" size="sm"><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Service Record</Button>
+              <Button variant="outline" size="sm" onClick={openAddServiceLog}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Service Record
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -302,7 +364,11 @@ export default function VehicleDetailPage({
               </TableHeader>
               <TableBody>
                 {serviceLogs.map((log) => (
-                  <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
+                  <TableRow
+                    key={log.id}
+                    onClick={() => openEditServiceLog(log)}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
                     <TableCell>
                       <p className="text-sm font-medium">{log.service_type}</p>
                       {log.description && <p className="text-xs text-muted-foreground">{log.description}</p>}
@@ -420,6 +486,24 @@ export default function VehicleDetailPage({
           )}
         </div>
       )}
+
+      {/* Dialogs */}
+      <EditVehicleDialog
+        open={editVehicleOpen}
+        onOpenChange={setEditVehicleOpen}
+        vehicle={vehicle}
+        onSave={handleSaveVehicle}
+      />
+      <ServiceLogDialog
+        open={serviceDialogOpen}
+        onOpenChange={setServiceDialogOpen}
+        mode={serviceDialogMode}
+        vehicleId={vehicle.id}
+        log={editingServiceLog}
+        currentOdometer={vehicle.odometer}
+        onSave={handleSaveServiceLog}
+        onDelete={handleDeleteServiceLog}
+      />
     </div>
   );
 }

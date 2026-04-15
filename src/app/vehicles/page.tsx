@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Car, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddVehicleDialog } from "@/components/forms/add-vehicle-dialog";
@@ -29,6 +29,7 @@ const statusStyles: Record<VehicleStatus, { bg: string; text: string; label: str
 type FilterStatus = "all" | VehicleStatus;
 
 export default function VehiclesPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [search, setSearch] = useState("");
 
@@ -127,9 +128,13 @@ export default function VehiclesPage() {
                 const costs = getServiceLogsByVehicle(vehicle.id).reduce((s, l) => s + l.cost, 0);
                 const net = revenue - costs;
                 return (
-                  <TableRow key={vehicle.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <TableRow
+                    key={vehicle.id}
+                    onClick={() => router.push(`/vehicles/${vehicle.id}`)}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
                     <TableCell>
-                      <Link href={`/vehicles/${vehicle.id}`} className="flex items-center gap-3">
+                      <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                           <Car className="h-5 w-5 text-muted-foreground" />
                         </div>
@@ -137,7 +142,7 @@ export default function VehiclesPage() {
                           <p className="text-sm font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</p>
                           <p className="text-xs text-muted-foreground">{vehicle.color} &middot; VIN: ...{vehicle.vin.slice(-6)}</p>
                         </div>
-                      </Link>
+                      </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm font-medium">{vehicle.license_plate}</TableCell>
                     <TableCell>
