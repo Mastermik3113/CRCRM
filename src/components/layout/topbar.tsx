@@ -103,16 +103,11 @@ export function TopBar() {
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative text-muted-foreground hover:text-foreground hover:bg-accent"
-                />
-              }
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+              aria-label="Notifications"
             >
               <Bell className="h-4.5 w-4.5" />
-              <span className="absolute -right-0.5 -top-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
+              <span className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
                 3
               </span>
             </DropdownMenuTrigger>
@@ -149,12 +144,8 @@ export function TopBar() {
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  className="relative h-9 w-9 rounded-full ml-1 hover:bg-accent"
-                />
-              }
+              className="relative ml-1 inline-flex h-9 w-9 items-center justify-center rounded-full outline-none transition-colors hover:bg-accent aria-expanded:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50"
+              aria-label="Account menu"
             >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white text-xs font-bold">

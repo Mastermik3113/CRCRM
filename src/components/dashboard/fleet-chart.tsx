@@ -15,11 +15,13 @@ const rented = demoVehicles.filter((v) => v.status === "rented").length;
 const maintenance = demoVehicles.filter((v) => v.status === "maintenance").length;
 const outOfService = demoVehicles.filter((v) => v.status === "out_of_service").length;
 
+const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+
 const fleetData = [
-  { label: "Available", value: available, color: "bg-emerald-500", percentage: Math.round((available / total) * 100) },
-  { label: "Rented", value: rented, color: "bg-blue-500", percentage: Math.round((rented / total) * 100) },
-  { label: "Maintenance", value: maintenance, color: "bg-amber-500", percentage: Math.round((maintenance / total) * 100) },
-  ...(outOfService > 0 ? [{ label: "Out of Service", value: outOfService, color: "bg-red-500", percentage: Math.round((outOfService / total) * 100) }] : []),
+  { label: "Available", value: available, color: "bg-emerald-500", percentage: pct(available) },
+  { label: "Rented", value: rented, color: "bg-blue-500", percentage: pct(rented) },
+  { label: "Maintenance", value: maintenance, color: "bg-amber-500", percentage: pct(maintenance) },
+  ...(outOfService > 0 ? [{ label: "Out of Service", value: outOfService, color: "bg-red-500", percentage: pct(outOfService) }] : []),
 ];
 
 export function FleetChart() {

@@ -2,72 +2,70 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Car, Eye, EyeOff, LogIn } from "lucide-react";
+import Image from "next/image";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
-      if (username === "yardentest" && password === "yardentest") {
-        localStorage.setItem("crcrm_auth", "true");
-        localStorage.setItem("crcrm_user", "Admin");
-        router.push("/welcome");
-      } else {
-        setError("Invalid username or password");
+    try {
+      const supabase = createClient();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
         setLoading(false);
+        return;
       }
-    }, 800);
+
+      if (!data.session) {
+        setError("Sign in failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      router.push("/welcome");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sign in.");
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex min-h-screen">
       {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 sidebar-gradient flex-col justify-between p-12">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-extrabold text-sm">
-            CR
-          </div>
-          <span className="text-xl font-bold text-white tracking-tight">CRCRM</span>
-        </div>
+      <div className="hidden lg:flex lg:w-1/2 bg-card flex-col justify-between p-12 border-r border-border">
+        <Image src="/logo.svg" alt="Car Rental CRM" width={260} height={140} priority className="h-14 w-auto" />
 
         <div className="space-y-6">
-          <h1 className="text-4xl font-bold text-white leading-tight">
+          <h1 className="text-4xl font-bold leading-tight">
             Car Rental<br />Management<br />Made Simple
           </h1>
-          <p className="text-lg text-slate-300 max-w-md">
+          <p className="text-lg text-muted-foreground max-w-md">
             Track your fleet, manage clients, log payments, and run your rental business from one dashboard.
           </p>
-          <div className="flex gap-8 pt-4">
-            <div>
-              <p className="text-3xl font-bold text-emerald-400">12</p>
-              <p className="text-sm text-slate-400">Vehicles</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-emerald-400">10</p>
-              <p className="text-sm text-slate-400">Clients</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-emerald-400">$14k+</p>
-              <p className="text-sm text-slate-400">Revenue</p>
-            </div>
-          </div>
         </div>
 
-        <p className="text-xs text-slate-500">
-          &copy; 2026 CRCRM. All rights reserved.
+        <p className="text-xs text-muted-foreground">
+          &copy; 2026 Car Rental CRM. All rights reserved.
         </p>
       </div>
 
@@ -75,11 +73,8 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center p-8 bg-background">
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-extrabold text-sm">
-              CR
-            </div>
-            <span className="text-xl font-bold tracking-tight">CRCRM</span>
+          <div className="lg:hidden flex justify-center">
+            <Image src="/logo.svg" alt="Car Rental CRM" width={260} height={140} priority className="h-14 w-auto" />
           </div>
 
           <div className="space-y-2 text-center lg:text-left">
@@ -91,16 +86,17 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">
-                Username
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email
               </Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
                 className="h-10"
               />
             </div>
@@ -117,6 +113,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="current-password"
                   className="h-10 pr-10"
                 />
                 <button
@@ -150,10 +147,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          <p className="text-xs text-center text-muted-foreground">
-            Demo credentials: yardentest / yardentest
-          </p>
         </div>
       </div>
     </div>
