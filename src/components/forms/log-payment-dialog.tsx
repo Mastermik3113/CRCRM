@@ -14,21 +14,61 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { demoRentals, getClientById, getVehicleById, getVehicleLabel } from "@/lib/demo-data";
+import { createPayment } from "@/lib/api";
+import type { Payment, PaymentMethod, Rental, Client, Vehicle } from "@/types/database";
 
-export function LogPaymentDialog() {
+interface LogPaymentDialogProps {
+  rentals: Rental[];
+  clients: Client[];
+  vehicles: Vehicle[];
+  onCreated?: (payment: Payment) => void;
+}
+
+export function LogPaymentDialog({ rentals, clients, vehicles, onCreated }: LogPaymentDialogProps) {
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const activeRentals = demoRentals.filter((r) => r.status === "active" || r.status === "reserved");
+  const [rentalId, setRentalId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("cash");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
+  const [reference, setReference] = useState("");
+  const [notes, setNotes] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const activeRentals = rentals.filter((r) => r.status === "active" || r.status === "reserved");
+
+  const reset = () => {
+    setRentalId(""); setAmount(""); setMethod("cash");
+    setPaymentDate(new Date().toISOString().split("T")[0]);
+    setReference(""); setNotes(""); setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert("Payment logged successfully! (Demo mode - not persisted to database)");
-    setOpen(false);
+    setError(null);
+    setSaving(true);
+    try {
+      const created = await createPayment({
+        rental_id: rentalId,
+        amount: Number(amount) || 0,
+        payment_method: method,
+        payment_date: paymentDate,
+        reference_number: reference.trim() || null,
+        notes: notes.trim() || null,
+      });
+      onCreated?.(created);
+      reset();
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to log payment");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger
         render={
           <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md" />
@@ -44,28 +84,44 @@ export function LogPaymentDialog() {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5 pt-2">
           <div className="space-y-2">
-            <Label htmlFor="rental">Rental *</Label>
-            <select id="rental" required className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm">
+            <Label htmlFor="lp_rental">Rental *</Label>
+            <select
+              id="lp_rental"
+              required
+              value={rentalId}
+              onChange={(e) => setRentalId(e.target.value)}
+              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+            >
               <option value="">Select a rental...</option>
               {activeRentals.map((r) => {
-                const client = getClientById(r.client_id);
-                const vehicle = getVehicleById(r.vehicle_id);
+                const client = clients.find((c) => c.id === r.client_id);
+                const vehicle = vehicles.find((v) => v.id === r.vehicle_id);
+                const label = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Unknown";
                 return (
                   <option key={r.id} value={r.id}>
-                    {client ? `${client.first_name} ${client.last_name}` : "Unknown"} — {vehicle ? getVehicleLabel(vehicle) : "Unknown"}
+                    {client ? `${client.first_name} ${client.last_name}` : "Unknown"} — {label}
                   </option>
                 );
               })}
             </select>
+            {activeRentals.length === 0 && (
+              <p className="text-xs text-muted-foreground">No active or reserved rentals. Create one first.</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ($) *</Label>
-              <Input id="amount" type="number" step="0.01" placeholder="0.00" min="0.01" required />
+              <Label htmlFor="lp_amount">Amount ($) *</Label>
+              <Input id="lp_amount" type="number" step="0.01" min="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="method">Payment Method *</Label>
-              <select id="method" required className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm">
+              <Label htmlFor="lp_method">Payment Method *</Label>
+              <select
+                id="lp_method"
+                required
+                value={method}
+                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+              >
                 <option value="cash">Cash</option>
                 <option value="zelle">Zelle</option>
                 <option value="check">Check</option>
@@ -74,25 +130,26 @@ export function LogPaymentDialog() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="payment_date">Date *</Label>
-              <Input id="payment_date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} />
+              <Label htmlFor="lp_date">Date *</Label>
+              <Input id="lp_date" type="date" required value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reference">Reference #</Label>
-              <Input id="reference" placeholder="e.g. CHK-1234" />
+              <Label htmlFor="lp_ref">Reference #</Label>
+              <Input id="lp_ref" value={reference} onChange={(e) => setReference(e.target.value)} />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="receipt">Receipt Upload</Label>
-            <Input id="receipt" type="file" accept="image/*,application/pdf" />
+            <Label htmlFor="lp_notes">Notes</Label>
+            <Textarea id="lp_notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="pay_notes">Notes</Label>
-            <Textarea id="pay_notes" placeholder="Payment details..." rows={2} />
-          </div>
+
+          {error && <p className="text-xs font-medium text-destructive">{error}</p>}
+
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">Log Payment</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+              {saving ? "Saving..." : "Log Payment"}
+            </Button>
           </div>
         </form>
       </DialogContent>

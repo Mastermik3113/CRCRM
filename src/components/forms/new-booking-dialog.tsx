@@ -14,24 +14,74 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { demoVehicles, demoClients } from "@/lib/demo-data";
+import { createRental } from "@/lib/api";
+import type { Rental, RateType, Vehicle, Client } from "@/types/database";
 
-export function NewBookingDialog() {
+interface NewBookingDialogProps {
+  vehicles: Vehicle[];
+  clients: Client[];
+  onCreated?: (rental: Rental) => void;
+}
+
+export function NewBookingDialog({ vehicles, clients, onCreated }: NewBookingDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const availableVehicles = demoVehicles.filter((v) => v.status === "available");
-  const activeClients = demoClients.filter((c) => c.lead_status === "converted");
+  const [vehicleId, setVehicleId] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [rateType, setRateType] = useState<RateType>("daily");
+  const [rateAmount, setRateAmount] = useState("");
+  const [totalAmount, setTotalAmount] = useState("");
+  const [deposit, setDeposit] = useState("");
+  const [override, setOverride] = useState("");
+  const [notes, setNotes] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert("Booking created successfully! (Demo mode - not persisted to database)");
-    setOpen(false);
+  const availableVehicles = vehicles.filter((v) => v.status === "available");
+
+  const reset = () => {
     setStep(1);
+    setVehicleId(""); setClientId(""); setStartDate(""); setEndDate("");
+    setRateType("daily"); setRateAmount(""); setTotalAmount("");
+    setDeposit(""); setOverride(""); setNotes(""); setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    try {
+      const created = await createRental({
+        vehicle_id: vehicleId,
+        client_id: clientId,
+        start_date: startDate,
+        end_date: endDate,
+        actual_return_date: null,
+        rate_type: rateType,
+        rate_amount: Number(rateAmount) || 0,
+        total_amount: Number(totalAmount) || 0,
+        manual_override_amount: override ? Number(override) : null,
+        status: "reserved",
+        security_deposit_amount: deposit ? Number(deposit) : 0,
+        deposit_status: "held",
+        contract_pdf_url: null,
+        notes: notes.trim() || null,
+      });
+      onCreated?.(created);
+      reset();
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create booking");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setStep(1); }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger
         render={
           <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md" />
@@ -50,7 +100,6 @@ export function NewBookingDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Progress bar */}
         <div className="flex gap-2 mb-4">
           {[1, 2, 3].map((s) => (
             <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? "bg-emerald-500" : "bg-muted"}`} />
@@ -58,98 +107,127 @@ export function NewBookingDialog() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Step 1: Vehicle & Client */}
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="vehicle">Select Vehicle *</Label>
-                <select id="vehicle" required className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm">
+                <Label htmlFor="nb_vehicle">Select Vehicle *</Label>
+                <select
+                  id="nb_vehicle"
+                  required
+                  value={vehicleId}
+                  onChange={(e) => setVehicleId(e.target.value)}
+                  className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                >
                   <option value="">Choose a vehicle...</option>
                   {availableVehicles.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.year} {v.make} {v.model} — {v.license_plate} (${v.daily_rate}/day)
+                      {v.year} {v.make} {v.model} — {v.license_plate}{v.daily_rate != null ? ` ($${v.daily_rate}/day)` : ""}
                     </option>
                   ))}
                 </select>
+                {availableVehicles.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No available vehicles. Add one from the Vehicles page.</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="client">Select Client *</Label>
-                <select id="client" required className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm">
+                <Label htmlFor="nb_client">Select Client *</Label>
+                <select
+                  id="nb_client"
+                  required
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                >
                   <option value="">Choose a client...</option>
-                  {activeClients.map((c) => (
+                  {clients.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.first_name} {c.last_name} — {c.phone}
+                      {c.first_name} {c.last_name}{c.phone ? ` — ${c.phone}` : ""}
                     </option>
                   ))}
                 </select>
+                {clients.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No clients yet. Add one from the Clients page.</p>
+                )}
               </div>
             </div>
           )}
 
-          {/* Step 2: Dates & Rate */}
           {step === 2 && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Start Date *</Label>
-                  <Input id="start_date" type="date" required />
+                  <Label htmlFor="nb_start">Start Date *</Label>
+                  <Input id="nb_start" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="end_date">End Date *</Label>
-                  <Input id="end_date" type="date" required />
+                  <Label htmlFor="nb_end">End Date *</Label>
+                  <Input id="nb_end" type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rate_type">Rate Type *</Label>
-                  <select id="rate_type" required className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm">
+                  <Label htmlFor="nb_rate_type">Rate Type *</Label>
+                  <select
+                    id="nb_rate_type"
+                    required
+                    value={rateType}
+                    onChange={(e) => setRateType(e.target.value as RateType)}
+                    className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                  >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="rate_amount">Rate Amount ($) *</Label>
-                  <Input id="rate_amount" type="number" step="0.01" placeholder="0.00" min="0" required />
+                  <Label htmlFor="nb_rate">Rate Amount ($) *</Label>
+                  <Input id="nb_rate" type="number" step="0.01" min="0" required value={rateAmount} onChange={(e) => setRateAmount(e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="total_amount">Total Amount ($) *</Label>
-                  <Input id="total_amount" type="number" step="0.01" placeholder="0.00" min="0" required />
+                  <Label htmlFor="nb_total">Total Amount ($) *</Label>
+                  <Input id="nb_total" type="number" step="0.01" min="0" required value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deposit">Security Deposit ($)</Label>
-                  <Input id="deposit" type="number" step="0.01" placeholder="500.00" min="0" />
+                  <Label htmlFor="nb_deposit">Security Deposit ($)</Label>
+                  <Input id="nb_deposit" type="number" step="0.01" min="0" value={deposit} onChange={(e) => setDeposit(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="override">Manual Override Amount ($)</Label>
-                <Input id="override" type="number" step="0.01" placeholder="Leave blank for standard pricing" min="0" />
+                <Label htmlFor="nb_override">Manual Override Amount ($)</Label>
+                <Input id="nb_override" type="number" step="0.01" min="0" placeholder="Leave blank for standard pricing" value={override} onChange={(e) => setOverride(e.target.value)} />
               </div>
             </div>
           )}
 
-          {/* Step 3: Review */}
           {step === 3 && (
             <div className="space-y-4">
-              <div className="rounded-lg border p-4 space-y-3 bg-muted/30">
-                <p className="text-sm font-medium">Review your booking details and click Confirm to create.</p>
-                <p className="text-xs text-muted-foreground">In production, this step would show a full summary of the selected vehicle, client, dates, and pricing. A rental agreement PDF would be generated upon confirmation.</p>
+              <div className="rounded-lg border p-4 space-y-2 bg-muted/30">
+                <p className="text-sm font-medium">Ready to create this booking?</p>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>Vehicle: {vehicles.find((v) => v.id === vehicleId)?.year} {vehicles.find((v) => v.id === vehicleId)?.make} {vehicles.find((v) => v.id === vehicleId)?.model}</li>
+                  <li>Client: {clients.find((c) => c.id === clientId)?.first_name} {clients.find((c) => c.id === clientId)?.last_name}</li>
+                  <li>Period: {startDate} → {endDate}</li>
+                  <li>Rate: ${rateAmount} / {rateType}</li>
+                  <li>Total: ${override || totalAmount}</li>
+                </ul>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="booking_notes">Booking Notes</Label>
-                <Textarea id="booking_notes" placeholder="Any special instructions or notes..." rows={3} />
+                <Label htmlFor="nb_notes">Booking Notes</Label>
+                <Textarea id="nb_notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
             </div>
           )}
 
-          {/* Navigation */}
+          {error && <p className="text-xs font-medium text-destructive">{error}</p>}
+
           <div className="flex justify-between pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => step === 1 ? setOpen(false) : setStep(step - 1)}
+              disabled={saving}
+              onClick={() => (step === 1 ? setOpen(false) : setStep(step - 1))}
             >
               {step === 1 ? "Cancel" : <><ChevronLeft className="mr-1 h-4 w-4" /> Back</>}
             </Button>
@@ -162,8 +240,8 @@ export function NewBookingDialog() {
                 Next <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="submit" className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-                Confirm Booking
+              <Button type="submit" disabled={saving} className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                {saving ? "Creating..." : "Confirm Booking"}
               </Button>
             )}
           </div>

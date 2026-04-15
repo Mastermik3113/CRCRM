@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   X,
   StickyNote,
   Clock,
+  Loader2,
   Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,14 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import {
-  getClientById,
-  getRentalsByClient,
-  getPaymentsByRental,
-  getVehicleById,
-  getClientTotalSpend,
-  getVehicleLabel,
-} from "@/lib/demo-data";
+import { getClient, listRentals, listPayments, listVehicles } from "@/lib/api";
+import type { Client, Rental, Payment, Vehicle } from "@/types/database";
 
 const rentalStatusStyles: Record<string, { bg: string; text: string }> = {
   active: { bg: "bg-emerald-100 dark:bg-emerald-950", text: "text-emerald-700 dark:text-emerald-400" },
@@ -80,22 +75,53 @@ export default function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const client = getClientById(id);
+  const [client, setClient] = useState<Client | null>(null);
+  const [rentals, setRentals] = useState<Rental[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
-  // Demo documents state
-  const [documents, setDocuments] = useState<DemoDocument[]>([
-    { id: "d1", name: "Drivers_License_Front.jpg", type: "Driver's License", uploadedAt: "Apr 1, 2026", size: "1.2 MB" },
-    { id: "d2", name: "Drivers_License_Back.jpg", type: "Driver's License", uploadedAt: "Apr 1, 2026", size: "980 KB" },
-  ]);
+  const [documents, setDocuments] = useState<DemoDocument[]>([]);
 
-  // Demo notes state
-  const [notes, setNotes] = useState<DemoNote[]>([
-    { id: "n1", content: client?.notes ?? "", createdAt: "Apr 10, 2026 2:00 PM", author: "Admin" },
-  ]);
+  const [notes, setNotes] = useState<DemoNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const [c, allR, allP, allV] = await Promise.all([
+          getClient(id),
+          listRentals(),
+          listPayments(),
+          listVehicles(),
+        ]);
+        if (cancelled) return;
+        setClient(c);
+        setRentals(allR.filter((r) => r.client_id === id));
+        setPayments(allP);
+        setVehicles(allV);
+        if (c?.notes) {
+          setNotes([{ id: "n1", content: c.notes, createdAt: formatDate(c.updated_at), author: "Admin" }]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!client) {
     return (
@@ -105,9 +131,15 @@ export default function ClientDetailPage({
     );
   }
 
-  const rentals = getRentalsByClient(id);
-  const totalSpend = getClientTotalSpend(id);
+  const totalSpend = rentals.reduce((sum, r) => {
+    const pay = payments.filter((p) => p.rental_id === r.id);
+    return sum + pay.reduce((ps, p) => ps + Number(p.amount), 0);
+  }, 0);
   const activeRentals = rentals.filter((r) => r.status === "active").length;
+
+  const getVehicleById = (vid: string) => vehicles.find((v) => v.id === vid);
+  const getVehicleLabel = (v: { year: number; make: string; model: string }) => `${v.year} ${v.make} ${v.model}`;
+  const getPaymentsByRental = (rid: string) => payments.filter((p) => p.rental_id === rid);
   const ls = leadStyles[client.lead_status] ?? leadStyles.inquiry;
 
   const tabs: { id: TabId; label: string; count?: number }[] = [

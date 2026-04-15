@@ -14,18 +14,63 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { createClientRow } from "@/lib/api";
+import type { Client, LeadSource, LeadStatus } from "@/types/database";
 
-export function AddClientDialog() {
+interface AddClientDialogProps {
+  onCreated?: (client: Client) => void;
+}
+
+export function AddClientDialog({ onCreated }: AddClientDialogProps) {
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [dlNumber, setDlNumber] = useState("");
+  const [leadSource, setLeadSource] = useState<LeadSource>("walkin");
+  const [leadStatus, setLeadStatus] = useState<LeadStatus>("inquiry");
+  const [notes, setNotes] = useState("");
+
+  const reset = () => {
+    setFirstName(""); setLastName(""); setEmail(""); setPhone(""); setAddress("");
+    setDlNumber(""); setLeadSource("walkin"); setLeadStatus("inquiry"); setNotes("");
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert("Client added successfully! (Demo mode - not persisted to database)");
-    setOpen(false);
+    setError(null);
+    setSaving(true);
+    try {
+      const created = await createClientRow({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        address: address.trim() || null,
+        drivers_license_number: dlNumber.trim() || null,
+        dl_image_url: null,
+        lead_status: leadStatus,
+        lead_source: leadSource,
+        notes: notes.trim() || null,
+      });
+      onCreated?.(created);
+      reset();
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add client");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger
         render={
           <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md" />
@@ -40,57 +85,53 @@ export function AddClientDialog() {
           <DialogDescription>Enter client details to add to your database.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-          {/* Personal Info */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Personal Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">First Name *</Label>
-                <Input id="first_name" placeholder="e.g. John" required />
+                <Label htmlFor="ac_first">First Name *</Label>
+                <Input id="ac_first" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name *</Label>
-                <Input id="last_name" placeholder="e.g. Smith" required />
+                <Label htmlFor="ac_last">Last Name *</Label>
+                <Input id="ac_last" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" />
+                <Label htmlFor="ac_email">Email</Label>
+                <Input id="ac_email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone *</Label>
-                <Input id="phone" type="tel" placeholder="(305) 555-0000" required />
+                <Label htmlFor="ac_phone">Phone</Label>
+                <Input id="ac_phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" placeholder="123 Main St, Miami, FL 33139" />
+              <Label htmlFor="ac_address">Address</Label>
+              <Input id="ac_address" value={address} onChange={(e) => setAddress(e.target.value)} />
             </div>
           </div>
 
-          {/* License Info */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Driver&apos;s License</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dl_number">License Number</Label>
-                <Input id="dl_number" placeholder="e.g. S530-1234-5678" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dl_image">License Photo</Label>
-                <Input id="dl_image" type="file" accept="image/*" />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="ac_dl">License Number</Label>
+              <Input id="ac_dl" value={dlNumber} onChange={(e) => setDlNumber(e.target.value)} />
             </div>
           </div>
 
-          {/* Lead Info */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Lead Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="lead_source">Lead Source</Label>
-                <select id="lead_source" className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm">
+                <Label htmlFor="ac_source">Lead Source</Label>
+                <select
+                  id="ac_source"
+                  className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                  value={leadSource}
+                  onChange={(e) => setLeadSource(e.target.value as LeadSource)}
+                >
                   <option value="walkin">Walk-in</option>
                   <option value="phone">Phone</option>
                   <option value="whatsapp">WhatsApp</option>
@@ -98,26 +139,34 @@ export function AddClientDialog() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lead_status">Status</Label>
-                <select id="lead_status" className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm">
+                <Label htmlFor="ac_status">Status</Label>
+                <select
+                  id="ac_status"
+                  className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                  value={leadStatus}
+                  onChange={(e) => setLeadStatus(e.target.value as LeadStatus)}
+                >
                   <option value="inquiry">Inquiry</option>
                   <option value="contacted">Contacted</option>
                   <option value="converted">Converted</option>
+                  <option value="lost">Lost</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" placeholder="Any additional details about this client..." rows={3} />
+            <Label htmlFor="ac_notes">Notes</Label>
+            <Textarea id="ac_notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
-          {/* Actions */}
+          {error && <p className="text-xs font-medium text-destructive">{error}</p>}
+
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">Add Client</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+              {saving ? "Saving..." : "Add Client"}
+            </Button>
           </div>
         </form>
       </DialogContent>

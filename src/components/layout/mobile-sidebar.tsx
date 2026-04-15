@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,14 +46,7 @@ export function MobileSidebar() {
         className="w-[250px] p-0 bg-card border-r border-border"
       >
         <SheetHeader className="flex h-16 flex-row items-center border-b border-border px-5">
-          <Image
-            src="/logo.svg"
-            alt="Car Rental CRM"
-            width={260}
-            height={140}
-            priority
-            className="h-11 w-auto"
-          />
+          <Logo size="md" />
           <SheetTitle className="sr-only">Car Rental CRM</SheetTitle>
         </SheetHeader>
         <ScrollArea className="flex-1 px-3 py-4">

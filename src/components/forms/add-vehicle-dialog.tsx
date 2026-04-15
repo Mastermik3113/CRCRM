@@ -14,19 +14,75 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { createVehicle } from "@/lib/api";
+import type { Vehicle, VehicleStatus } from "@/types/database";
 
-export function AddVehicleDialog() {
+interface AddVehicleDialogProps {
+  onCreated?: (vehicle: Vehicle) => void;
+}
+
+export function AddVehicleDialog({ onCreated }: AddVehicleDialogProps) {
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [year, setYear] = useState("");
+  const [color, setColor] = useState("");
+  const [odometer, setOdometer] = useState("");
+  const [vin, setVin] = useState("");
+  const [plate, setPlate] = useState("");
+  const [status, setStatus] = useState<VehicleStatus>("available");
+  const [dailyRate, setDailyRate] = useState("");
+  const [weeklyRate, setWeeklyRate] = useState("");
+  const [monthlyRate, setMonthlyRate] = useState("");
+  const [insExpiry, setInsExpiry] = useState("");
+  const [regExpiry, setRegExpiry] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const reset = () => {
+    setMake(""); setModel(""); setYear(""); setColor(""); setOdometer("");
+    setVin(""); setPlate(""); setStatus("available");
+    setDailyRate(""); setWeeklyRate(""); setMonthlyRate("");
+    setInsExpiry(""); setRegExpiry(""); setNotes("");
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Demo: just close the dialog
-    alert("Vehicle added successfully! (Demo mode - not persisted to database)");
-    setOpen(false);
+    setError(null);
+    setSaving(true);
+    try {
+      const created = await createVehicle({
+        make: make.trim(),
+        model: model.trim(),
+        year: Number(year),
+        color: color.trim() || null,
+        odometer: odometer ? Number(odometer) : 0,
+        vin: vin.trim(),
+        license_plate: plate.trim(),
+        status,
+        daily_rate: dailyRate ? Number(dailyRate) : null,
+        weekly_rate: weeklyRate ? Number(weeklyRate) : null,
+        monthly_rate: monthlyRate ? Number(monthlyRate) : null,
+        insurance_expiry: insExpiry || null,
+        registration_expiry: regExpiry || null,
+        image_url: null,
+        notes: notes.trim() || null,
+      });
+      onCreated?.(created);
+      reset();
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create vehicle");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger
         render={
           <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md" />
@@ -41,92 +97,103 @@ export function AddVehicleDialog() {
           <DialogDescription>Enter vehicle details to add to your fleet.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-          {/* Vehicle Info */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Vehicle Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="make">Make *</Label>
-                <Input id="make" placeholder="e.g. Toyota" required />
+                <Label htmlFor="av_make">Make *</Label>
+                <Input id="av_make" required value={make} onChange={(e) => setMake(e.target.value)} placeholder="e.g. Toyota" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="model">Model *</Label>
-                <Input id="model" placeholder="e.g. Camry" required />
+                <Label htmlFor="av_model">Model *</Label>
+                <Input id="av_model" required value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. Camry" />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="year">Year *</Label>
-                <Input id="year" type="number" placeholder="2024" min="1900" max="2100" required />
+                <Label htmlFor="av_year">Year *</Label>
+                <Input id="av_year" type="number" min="1900" max="2100" required value={year} onChange={(e) => setYear(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="color">Color</Label>
-                <Input id="color" placeholder="e.g. White" />
+                <Label htmlFor="av_color">Color</Label>
+                <Input id="av_color" value={color} onChange={(e) => setColor(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="odometer">Odometer (mi)</Label>
-                <Input id="odometer" type="number" placeholder="0" min="0" />
+                <Label htmlFor="av_odo">Odometer (mi)</Label>
+                <Input id="av_odo" type="number" min="0" value={odometer} onChange={(e) => setOdometer(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vin">VIN *</Label>
-                <Input id="vin" placeholder="17-character VIN" maxLength={17} required />
+                <Label htmlFor="av_vin">VIN *</Label>
+                <Input id="av_vin" maxLength={17} required value={vin} onChange={(e) => setVin(e.target.value)} placeholder="17-character VIN" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="plate">License Plate *</Label>
-                <Input id="plate" placeholder="e.g. ABC-1234" required />
+                <Label htmlFor="av_plate">License Plate *</Label>
+                <Input id="av_plate" required value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="e.g. ABC-1234" />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="av_status">Status</Label>
+              <select
+                id="av_status"
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as VehicleStatus)}
+              >
+                <option value="available">Available</option>
+                <option value="rented">Rented</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="out_of_service">Out of Service</option>
+              </select>
             </div>
           </div>
 
-          {/* Rates */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Rental Rates</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="daily_rate">Daily Rate ($)</Label>
-                <Input id="daily_rate" type="number" step="0.01" placeholder="0.00" min="0" />
+                <Label htmlFor="av_daily">Daily Rate ($)</Label>
+                <Input id="av_daily" type="number" step="0.01" min="0" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="weekly_rate">Weekly Rate ($)</Label>
-                <Input id="weekly_rate" type="number" step="0.01" placeholder="0.00" min="0" />
+                <Label htmlFor="av_weekly">Weekly Rate ($)</Label>
+                <Input id="av_weekly" type="number" step="0.01" min="0" value={weeklyRate} onChange={(e) => setWeeklyRate(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="monthly_rate">Monthly Rate ($)</Label>
-                <Input id="monthly_rate" type="number" step="0.01" placeholder="0.00" min="0" />
+                <Label htmlFor="av_monthly">Monthly Rate ($)</Label>
+                <Input id="av_monthly" type="number" step="0.01" min="0" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} />
               </div>
             </div>
           </div>
 
-          {/* Insurance & Registration */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Compliance</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="insurance_expiry">Insurance Expiry</Label>
-                <Input id="insurance_expiry" type="date" />
+                <Label htmlFor="av_ins">Insurance Expiry</Label>
+                <Input id="av_ins" type="date" value={insExpiry} onChange={(e) => setInsExpiry(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="registration_expiry">Registration Expiry</Label>
-                <Input id="registration_expiry" type="date" />
+                <Label htmlFor="av_reg">Registration Expiry</Label>
+                <Input id="av_reg" type="date" value={regExpiry} onChange={(e) => setRegExpiry(e.target.value)} />
               </div>
             </div>
           </div>
 
-          {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" placeholder="Any additional details about this vehicle..." rows={3} />
+            <Label htmlFor="av_notes">Notes</Label>
+            <Textarea id="av_notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
-          {/* Actions */}
+          {error && <p className="text-xs font-medium text-destructive">{error}</p>}
+
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-              Add Vehicle
+            <Button type="submit" disabled={saving} className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+              {saving ? "Saving..." : "Add Vehicle"}
             </Button>
           </div>
         </form>

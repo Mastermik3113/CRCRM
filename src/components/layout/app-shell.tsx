@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { TopBar } from "./topbar";
 import { FAB } from "./fab";
+import { RobertChat } from "@/components/robert/robert-chat";
 import { createClient } from "@/lib/supabase/client";
 import type { ReactNode } from "react";
 
@@ -71,6 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <FAB />
+      <RobertChat />
     </div>
   );
 }

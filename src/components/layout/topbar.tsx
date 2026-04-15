@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { Bell, Search, Sun, Moon } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -55,15 +54,8 @@ export function TopBar() {
         <MobileSidebar />
 
         {/* Logo */}
-        <Link href="/" className="flex items-center shrink-0">
-          <Image
-            src="/logo.svg"
-            alt="Car Rental CRM"
-            width={260}
-            height={140}
-            priority
-            className="h-12 w-auto"
-          />
+        <Link href="/" className="flex items-center shrink-0" aria-label="Car Rental CRM home">
+          <Logo size="md" />
         </Link>
 
         {/* Desktop horizontal nav */}
@@ -112,9 +104,7 @@ export function TopBar() {
               </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel className="font-semibold">
-                Notifications
-              </DropdownMenuLabel>
+              <div className="px-2 py-1.5 text-sm font-semibold">Notifications</div>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
                 <span className="text-sm font-medium">Insurance expiring</span>
@@ -154,7 +144,7 @@ export function TopBar() {
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <div className="px-2 py-1.5 text-sm font-semibold">My Account</div>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>

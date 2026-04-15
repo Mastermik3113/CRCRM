@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/brand/logo";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -53,7 +53,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-card flex-col justify-between p-12 border-r border-border">
-        <Image src="/logo.svg" alt="Car Rental CRM" width={260} height={140} priority className="h-14 w-auto" />
+        <Logo size="md" />
 
         <div className="space-y-6">
           <h1 className="text-4xl font-bold leading-tight">
@@ -74,7 +74,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center">
-            <Image src="/logo.svg" alt="Car Rental CRM" width={260} height={140} priority className="h-14 w-auto" />
+            <Logo size="lg" />
           </div>
 
           <div className="space-y-2 text-center lg:text-left">

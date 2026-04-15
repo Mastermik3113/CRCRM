@@ -10,7 +10,22 @@ export type RateType = "daily" | "weekly" | "monthly";
 export type DepositStatus = "held" | "returned" | "partial";
 export type PaymentMethod = "cash" | "zelle" | "check";
 export type DocumentType = "registration" | "insurance" | "other";
-export type ExpenseCategory = "repair" | "insurance" | "fuel" | "office" | "other";
+export type ExpenseCategory =
+  | "repair"
+  | "insurance"
+  | "fuel"
+  | "office"
+  | "other"
+  | "rent"
+  | "software"
+  | "parking"
+  | "marketing"
+  | "payroll"
+  | "utilities"
+  | "supplies"
+  | "legal"
+  | "maintenance";
+export type Frequency = "weekly" | "monthly" | "quarterly" | "yearly";
 
 // ============================================
 // Row Types (what SELECT returns)
@@ -114,6 +129,8 @@ export interface Expense {
   expense_date: string;
   vehicle_id: string | null;
   receipt_url: string | null;
+  vendor: string | null;
+  notes: string | null;
   created_at: string;
 }
 
@@ -128,6 +145,20 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface RecurringExpense {
+  id: string;
+  name: string;
+  vendor: string;
+  category: ExpenseCategory;
+  amount: number;
+  frequency: Frequency;
+  next_due: string;
+  active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================
 // Insert Types (omit auto-generated fields)
 // ============================================
@@ -139,6 +170,7 @@ export type PaymentInsert = Omit<Payment, "id" | "created_at">;
 export type VehicleDocumentInsert = Omit<VehicleDocument, "id" | "created_at">;
 export type ServiceLogInsert = Omit<ServiceLog, "id" | "created_at">;
 export type ExpenseInsert = Omit<Expense, "id" | "created_at">;
+export type RecurringExpenseInsert = Omit<RecurringExpense, "id" | "created_at" | "updated_at">;
 
 // ============================================
 // Update Types (all fields optional)

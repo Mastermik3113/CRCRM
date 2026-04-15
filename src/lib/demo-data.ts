@@ -13,6 +13,7 @@ import type {
   Rental,
   Payment,
   ServiceLog,
+  ExpenseCategory,
 } from "@/types/database";
 
 // ---------- core entities: start empty ------------------------------------
@@ -64,20 +65,7 @@ export function getVehicleLabel(v: Vehicle): string {
 // Back Office — expense types & empty seeds
 // ============================================================================
 
-export type ExpenseCategory =
-  | "insurance"
-  | "rent"
-  | "software"
-  | "fuel"
-  | "maintenance"
-  | "parking"
-  | "marketing"
-  | "payroll"
-  | "utilities"
-  | "supplies"
-  | "legal"
-  | "other";
-
+export type { ExpenseCategory } from "@/types/database";
 export type Frequency = "weekly" | "monthly" | "quarterly" | "yearly";
 
 export interface RecurringExpense {
@@ -109,12 +97,14 @@ export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
   software: "Software",
   fuel: "Fuel",
   maintenance: "Maintenance",
+  repair: "Repair",
   parking: "Parking",
   marketing: "Marketing",
   payroll: "Payroll",
   utilities: "Utilities",
   supplies: "Supplies",
   legal: "Legal",
+  office: "Office",
   other: "Other",
 };
 

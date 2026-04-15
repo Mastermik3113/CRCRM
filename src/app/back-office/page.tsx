@@ -36,17 +36,27 @@ import {
 } from "@/components/ui/table";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { expenseCategoryLabels } from "@/lib/demo-data";
 import {
-  demoRecurringExpenses,
-  demoOneTimeExpenses,
-  demoPayments,
-  demoVehicles,
-  expenseCategoryLabels,
-  type ExpenseCategory,
-  type Frequency,
-  type RecurringExpense,
-  type OneTimeExpense,
-} from "@/lib/demo-data";
+  listRecurringExpenses,
+  createRecurringExpense,
+  updateRecurringExpense,
+  deleteRecurringExpense,
+  listExpenses,
+  createExpense,
+  updateExpense,
+  deleteExpense,
+  listPayments,
+  listVehicles,
+} from "@/lib/api";
+import type {
+  ExpenseCategory,
+  Frequency,
+  RecurringExpense,
+  Expense as OneTimeExpense,
+  Payment,
+  Vehicle,
+} from "@/types/database";
 
 type TabId = "recurring" | "expenses" | "pnl";
 
@@ -63,12 +73,14 @@ const categoryColors: Record<ExpenseCategory, string> = {
   software: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-400",
   fuel: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400",
   maintenance: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
+  repair: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
   parking: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400",
   marketing: "bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-400",
   payroll: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
   utilities: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
   supplies: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   legal: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400",
+  office: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   other: "bg-muted text-muted-foreground",
 };
 
@@ -138,7 +150,7 @@ function RecurringExpenseDialog({ open, onOpenChange, mode, expense, onSave, onD
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const saved: RecurringExpense = {
-      id: mode === "edit" && expense ? expense.id : `re${Date.now()}`,
+      id: mode === "edit" && expense ? expense.id : "",
       name: name.trim(),
       vendor: vendor.trim(),
       category,
@@ -147,6 +159,8 @@ function RecurringExpenseDialog({ open, onOpenChange, mode, expense, onSave, onD
       next_due: nextDue,
       active,
       notes: notes.trim() || null,
+      created_at: mode === "edit" && expense ? expense.created_at : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     onSave(saved);
     onOpenChange(false);
@@ -266,11 +280,12 @@ interface OneTimeDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: "add" | "edit";
   expense?: OneTimeExpense | null;
+  vehicles: Vehicle[];
   onSave: (exp: OneTimeExpense) => void;
   onDelete?: (id: string) => void;
 }
 
-function OneTimeExpenseDialog({ open, onOpenChange, mode, expense, onSave, onDelete }: OneTimeDialogProps) {
+function OneTimeExpenseDialog({ open, onOpenChange, mode, expense, vehicles, onSave, onDelete }: OneTimeDialogProps) {
   const [description, setDescription] = useState("");
   const [vendor, setVendor] = useState("");
   const [category, setCategory] = useState<ExpenseCategory>("other");
@@ -303,14 +318,16 @@ function OneTimeExpenseDialog({ open, onOpenChange, mode, expense, onSave, onDel
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const saved: OneTimeExpense = {
-      id: mode === "edit" && expense ? expense.id : `ex${Date.now()}`,
+      id: mode === "edit" && expense ? expense.id : "",
       description: description.trim(),
       vendor: vendor.trim() || null,
       category,
       amount: Number(amount) || 0,
       expense_date: expenseDate,
       vehicle_id: vehicleId || null,
+      receipt_url: mode === "edit" && expense ? expense.receipt_url : null,
       notes: notes.trim() || null,
+      created_at: mode === "edit" && expense ? expense.created_at : new Date().toISOString(),
     };
     onSave(saved);
     onOpenChange(false);
@@ -369,7 +386,7 @@ function OneTimeExpenseDialog({ open, onOpenChange, mode, expense, onSave, onDel
               onChange={(e) => setVehicleId(e.target.value)}
             >
               <option value="">None (general business expense)</option>
-              {demoVehicles.map((v) => (
+              {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} — {v.license_plate}</option>
               ))}
             </select>
@@ -416,8 +433,10 @@ function OneTimeExpenseDialog({ open, onOpenChange, mode, expense, onSave, onDel
 export default function BackOfficePage() {
   const [activeTab, setActiveTab] = useState<TabId>("recurring");
 
-  const [recurring, setRecurring] = useState<RecurringExpense[]>(demoRecurringExpenses);
-  const [expenses, setExpenses] = useState<OneTimeExpense[]>(demoOneTimeExpenses);
+  const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
+  const [expenses, setExpenses] = useState<OneTimeExpense[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
   const [recurringSearch, setRecurringSearch] = useState("");
   const [expenseSearch, setExpenseSearch] = useState("");
@@ -430,6 +449,25 @@ export default function BackOfficePage() {
   const [oneTimeDialogMode, setOneTimeDialogMode] = useState<"add" | "edit">("add");
   const [editingOneTime, setEditingOneTime] = useState<OneTimeExpense | null>(null);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const [r, e, p, v] = await Promise.all([
+          listRecurringExpenses(),
+          listExpenses(),
+          listPayments(),
+          listVehicles(),
+        ]);
+        setRecurring(r);
+        setExpenses(e);
+        setPayments(p);
+        setVehicles(v);
+      } catch {
+        // stay empty
+      }
+    })();
+  }, []);
+
   // ---------- KPI calcs ----------
 
   const monthlyRecurring = useMemo(
@@ -439,13 +477,13 @@ export default function BackOfficePage() {
 
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const revenueThisMonth = demoPayments
+  const revenueThisMonth = payments
     .filter((p) => p.payment_date.startsWith(currentMonthKey))
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + Number(p.amount), 0);
 
   const oneTimeThisMonth = expenses
     .filter((e) => e.expense_date.startsWith(currentMonthKey))
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce((sum, e) => sum + Number(e.amount), 0);
 
   const totalExpensesThisMonth = monthlyRecurring + oneTimeThisMonth;
   const netProfit = revenueThisMonth - totalExpensesThisMonth;
@@ -458,7 +496,7 @@ export default function BackOfficePage() {
       .forEach((r) => map.set(r.category, (map.get(r.category) ?? 0) + monthlyNormalize(r)));
     expenses
       .filter((e) => e.expense_date.startsWith(currentMonthKey))
-      .forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + e.amount));
+      .forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + Number(e.amount)));
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [recurring, expenses, currentMonthKey]);
 
@@ -499,14 +537,34 @@ export default function BackOfficePage() {
     setEditingRecurring(exp);
     setRecurringDialogOpen(true);
   };
-  const saveRecurring = (exp: RecurringExpense) => {
-    setRecurring((prev) => {
-      const idx = prev.findIndex((r) => r.id === exp.id);
-      return idx >= 0 ? prev.map((r) => (r.id === exp.id ? exp : r)) : [exp, ...prev];
-    });
+  const saveRecurring = async (exp: RecurringExpense) => {
+    try {
+      const payload = {
+        name: exp.name,
+        vendor: exp.vendor,
+        category: exp.category,
+        amount: exp.amount,
+        frequency: exp.frequency,
+        next_due: exp.next_due,
+        active: exp.active,
+        notes: exp.notes ?? null,
+      };
+      const existing = recurring.find((r) => r.id === exp.id);
+      const persisted = existing
+        ? await updateRecurringExpense(exp.id, payload)
+        : await createRecurringExpense(payload);
+      setRecurring((prev) => (existing ? prev.map((r) => (r.id === persisted.id ? persisted : r)) : [persisted, ...prev]));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to save recurring expense");
+    }
   };
-  const deleteRecurring = (id: string) => {
-    setRecurring((prev) => prev.filter((r) => r.id !== id));
+  const deleteRecurring = async (id: string) => {
+    try {
+      await deleteRecurringExpense(id);
+      setRecurring((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to delete recurring expense");
+    }
   };
 
   const openAddOneTime = () => {
@@ -519,14 +577,34 @@ export default function BackOfficePage() {
     setEditingOneTime(exp);
     setOneTimeDialogOpen(true);
   };
-  const saveOneTime = (exp: OneTimeExpense) => {
-    setExpenses((prev) => {
-      const idx = prev.findIndex((e) => e.id === exp.id);
-      return idx >= 0 ? prev.map((e) => (e.id === exp.id ? exp : e)) : [exp, ...prev];
-    });
+  const saveOneTime = async (exp: OneTimeExpense) => {
+    try {
+      const payload = {
+        description: exp.description,
+        vendor: exp.vendor ?? null,
+        category: exp.category,
+        amount: exp.amount,
+        expense_date: exp.expense_date,
+        vehicle_id: exp.vehicle_id ?? null,
+        receipt_url: exp.receipt_url ?? null,
+        notes: exp.notes ?? null,
+      };
+      const existing = expenses.find((e) => e.id === exp.id);
+      const persisted = existing
+        ? await updateExpense(exp.id, payload)
+        : await createExpense(payload);
+      setExpenses((prev) => (existing ? prev.map((e) => (e.id === persisted.id ? persisted : e)) : [persisted, ...prev]));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to save expense");
+    }
   };
-  const deleteOneTime = (id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  const deleteOneTime = async (id: string) => {
+    try {
+      await deleteExpense(id);
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete expense");
+    }
   };
 
   const tabs: { id: TabId; label: string; count?: number }[] = [
@@ -537,7 +615,7 @@ export default function BackOfficePage() {
 
   const getVehicleLabel = (vId: string | null) => {
     if (!vId) return null;
-    const v = demoVehicles.find((x) => x.id === vId);
+    const v = vehicles.find((x) => x.id === vId);
     return v ? `${v.year} ${v.make} ${v.model}` : null;
   };
 
@@ -884,6 +962,7 @@ export default function BackOfficePage() {
         onOpenChange={setOneTimeDialogOpen}
         mode={oneTimeDialogMode}
         expense={editingOneTime}
+        vehicles={vehicles}
         onSave={saveOneTime}
         onDelete={deleteOneTime}
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   Plus,
   StickyNote,
   Clock,
+  Loader2,
   Image as ImageIcon,
   Pencil,
 } from "lucide-react";
@@ -33,17 +34,19 @@ import {
 } from "@/components/ui/table";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import {
-  getVehicleById,
-  getRentalsByVehicle,
-  getServiceLogsByVehicle,
-  getPaymentsByRental,
-  getClientById,
-  demoServiceLogs,
-  demoVehicles,
-} from "@/lib/demo-data";
+  getVehicle,
+  listServiceLogsByVehicle,
+  listRentals,
+  listPayments,
+  listClients,
+  updateVehicle,
+  createServiceLog,
+  updateServiceLog,
+  deleteServiceLog,
+} from "@/lib/api";
 import { EditVehicleDialog } from "@/components/forms/edit-vehicle-dialog";
 import { ServiceLogDialog } from "@/components/forms/service-log-dialog";
-import type { ServiceLog, Vehicle } from "@/types/database";
+import type { ServiceLog, Vehicle, Rental, Payment, Client } from "@/types/database";
 
 const statusStyles: Record<string, { bg: string; text: string }> = {
   available: { bg: "bg-emerald-100 dark:bg-emerald-950", text: "text-emerald-700 dark:text-emerald-400" },
@@ -83,43 +86,76 @@ export default function VehicleDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const initialVehicle = getVehicleById(id);
-  const [vehicle, setVehicle] = useState<Vehicle | undefined>(initialVehicle);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
-  // Service logs local mirror (starts from shared demo array)
-  const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>(() => getServiceLogsByVehicle(id));
+  const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
+  const [rentals, setRentals] = useState<Rental[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
 
-  // Vehicle edit dialog
   const [editVehicleOpen, setEditVehicleOpen] = useState(false);
 
-  // Service log dialog state
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [serviceDialogMode, setServiceDialogMode] = useState<"add" | "edit">("add");
   const [editingServiceLog, setEditingServiceLog] = useState<ServiceLog | null>(null);
 
-  const [documents, setDocuments] = useState<DemoDocument[]>([
-    { id: "vd1", name: "Vehicle_Registration.pdf", type: "Registration", expiry: "Sep 15, 2026", uploadedAt: "Jan 10, 2026", size: "540 KB" },
-    { id: "vd2", name: "Insurance_Certificate.pdf", type: "Insurance", expiry: "Apr 17, 2026", uploadedAt: "Jan 10, 2026", size: "1.1 MB" },
-  ]);
+  const [documents, setDocuments] = useState<DemoDocument[]>([]);
 
-  const [notes, setNotes] = useState<DemoNote[]>(() => {
-    if (!vehicle?.notes) return [];
-    return [{ id: "vn1", content: vehicle.notes, createdAt: "Apr 10, 2026 2:00 PM", author: "Admin" }];
-  });
+  const [notes, setNotes] = useState<DemoNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
 
-  if (!vehicle) {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const [v, logs, allRentals, allPayments, allClients] = await Promise.all([
+          getVehicle(id),
+          listServiceLogsByVehicle(id),
+          listRentals(),
+          listPayments(),
+          listClients(),
+        ]);
+        if (cancelled) return;
+        setVehicle(v);
+        setServiceLogs(logs);
+        setRentals(allRentals.filter((r) => r.vehicle_id === id));
+        setPayments(allPayments);
+        setClients(allClients);
+        if (v?.notes) {
+          setNotes([{ id: "vn1", content: v.notes, createdAt: new Date(v.updated_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }), author: "Admin" }]);
+        }
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Failed to load vehicle");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">Vehicle not found</p>
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  const rentals = getRentalsByVehicle(id);
+  if (loadError || !vehicle) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-muted-foreground">{loadError ?? "Vehicle not found"}</p>
+      </div>
+    );
+  }
+
+  const getClientById = (cid: string) => clients.find((c) => c.id === cid);
 
   const openAddServiceLog = () => {
     setServiceDialogMode("add");
@@ -133,33 +169,76 @@ export default function VehicleDetailPage({
     setServiceDialogOpen(true);
   };
 
-  const handleSaveServiceLog = (saved: ServiceLog) => {
-    setServiceLogs((prev) => {
-      const existing = prev.find((l) => l.id === saved.id);
-      const next = existing
-        ? prev.map((l) => (l.id === saved.id ? saved : l))
-        : [saved, ...prev];
-      // Mirror change into the shared demo array so other screens see it
-      const sharedIdx = demoServiceLogs.findIndex((l) => l.id === saved.id);
-      if (sharedIdx >= 0) demoServiceLogs[sharedIdx] = saved;
-      else demoServiceLogs.unshift(saved);
-      return next.sort((a, b) => b.service_date.localeCompare(a.service_date));
-    });
+  const handleSaveServiceLog = async (saved: ServiceLog) => {
+    try {
+      const existing = serviceLogs.find((l) => l.id === saved.id);
+      const persisted = existing
+        ? await updateServiceLog(saved.id, {
+            vehicle_id: saved.vehicle_id,
+            service_type: saved.service_type,
+            description: saved.description,
+            cost: saved.cost,
+            service_date: saved.service_date,
+            next_service_date: saved.next_service_date,
+            odometer_at_service: saved.odometer_at_service,
+          })
+        : await createServiceLog({
+            vehicle_id: saved.vehicle_id,
+            service_type: saved.service_type,
+            description: saved.description,
+            cost: saved.cost,
+            service_date: saved.service_date,
+            next_service_date: saved.next_service_date,
+            odometer_at_service: saved.odometer_at_service,
+          });
+      setServiceLogs((prev) => {
+        const next = existing ? prev.map((l) => (l.id === persisted.id ? persisted : l)) : [persisted, ...prev];
+        return next.sort((a, b) => b.service_date.localeCompare(a.service_date));
+      });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to save service log");
+    }
   };
 
-  const handleDeleteServiceLog = (logId: string) => {
-    setServiceLogs((prev) => prev.filter((l) => l.id !== logId));
-    const sharedIdx = demoServiceLogs.findIndex((l) => l.id === logId);
-    if (sharedIdx >= 0) demoServiceLogs.splice(sharedIdx, 1);
+  const handleDeleteServiceLog = async (logId: string) => {
+    try {
+      await deleteServiceLog(logId);
+      setServiceLogs((prev) => prev.filter((l) => l.id !== logId));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to delete service log");
+    }
   };
 
-  const handleSaveVehicle = (updated: Vehicle) => {
-    setVehicle(updated);
-    const sharedIdx = demoVehicles.findIndex((v) => v.id === updated.id);
-    if (sharedIdx >= 0) demoVehicles[sharedIdx] = updated;
+  const handleSaveVehicle = async (updated: Vehicle) => {
+    try {
+      const persisted = await updateVehicle(updated.id, {
+        vin: updated.vin,
+        license_plate: updated.license_plate,
+        make: updated.make,
+        model: updated.model,
+        year: updated.year,
+        color: updated.color,
+        odometer: updated.odometer,
+        status: updated.status,
+        insurance_expiry: updated.insurance_expiry,
+        registration_expiry: updated.registration_expiry,
+        daily_rate: updated.daily_rate,
+        weekly_rate: updated.weekly_rate,
+        monthly_rate: updated.monthly_rate,
+        image_url: updated.image_url,
+        notes: updated.notes,
+      });
+      setVehicle(persisted);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to update vehicle");
+    }
   };
-  const totalRevenue = rentals.reduce((sum, r) => sum + getPaymentsByRental(r.id).reduce((ps, p) => ps + p.amount, 0), 0);
-  const totalServiceCost = serviceLogs.reduce((sum, s) => sum + s.cost, 0);
+
+  const totalRevenue = rentals.reduce((sum, r) => {
+    const pay = payments.filter((p) => p.rental_id === r.id);
+    return sum + pay.reduce((ps, p) => ps + Number(p.amount), 0);
+  }, 0);
+  const totalServiceCost = serviceLogs.reduce((sum, s) => sum + Number(s.cost), 0);
   const netProfit = totalRevenue - totalServiceCost;
   const style = statusStyles[vehicle.status] ?? statusStyles.available;
 
@@ -313,7 +392,9 @@ export default function VehicleDetailPage({
               <TableBody>
                 {rentals.map((rental) => {
                   const client = getClientById(rental.client_id);
-                  const collected = getPaymentsByRental(rental.id).reduce((s, p) => s + p.amount, 0);
+                  const collected = payments
+                    .filter((p) => p.rental_id === rental.id)
+                    .reduce((s, p) => s + Number(p.amount), 0);
                   const rs = rentalStatusStyles[rental.status] ?? rentalStatusStyles.active;
                   return (
                     <TableRow key={rental.id} className="hover:bg-muted/50 transition-colors">
